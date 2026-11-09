@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rejalashtirish simulyatori</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <h1>Protsessorni rejalashtirish simulyatori</h1>
+    <p>Priority (preemptive / non-preemptive) va Round Robin — har bir qadam tushuntirishi bilan</p>
+  </div>
+</header>
+
+<main class="wrap grid">
+
+  <!-- 1. Kiritish paneli -->
+  <section class="card" aria-labelledby="h-input">
+    <h2 id="h-input">1. Ma'lumotlar</h2>
+
+    <label class="field">
+      <span>Algoritm</span>
+      <select id="algo">
+        <option value="priority-p">Priority — Preemptive (to'xtatuvchi)</option>
+        <option value="priority-np">Priority — Non-preemptive</option>
+        <option value="rr">Round Robin</option>
+      </select>
+    </label>
+
+    <div id="priorityOpts">
+      <label class="field">
+        <span>Priority nimaga teng?</span>
+        <select id="pmode">
+          <option value="remaining">Qolgan vaqt kichigi (SRTF)</option>
+          <option value="custom">Priority ustuni (o'zim kiritaman)</option>
+        </select>
+      </label>
+      <p class="hint" id="pmodeHint"></p>
+    </div>
+
+    <div id="rrOpts" hidden>
+      <div class="two">
+        <label class="field">
+          <span>Tartib raqam</span>
+          <input type="number" id="orderNo" min="1" step="1" value="23">
+        </label>
+        <label class="field">
+          <span>Vaqt kvanti (TQ)</span>
+          <input type="number" id="tq" min="1" step="1" value="4">
+        </label>
+      </div>
+      <p class="hint">TQ = tartib raqam % 3 + 2. Tartib raqamni o'zgartirsangiz TQ o'zi hisoblanadi, xohlasangiz TQ ni qo'lda ham yozish mumkin.</p>
+    </div>
+
+    <div class="presets">
+      <span>Tayyor jadvallar:</span>
+      <button type="button" class="chip-btn" data-preset="v23">23-variant</button>
+      <button type="button" class="chip-btn" data-preset="v25">25-variant</button>
+      <button type="button" class="chip-btn" data-preset="rand">Tasodifiy</button>
+    </div>
+
+    <table class="proc" aria-label="Jarayonlar jadvali">
+      <thead>
+        <tr>
+          <th>Jarayon</th>
+          <th title="Arrival Time — kelish vaqti">AT</th>
+          <th title="Burst Time — bajarilish vaqti">BT</th>
+          <th id="prHead" title="Priority — kichik son = yuqori ustuvorlik" hidden>Priority</th>
+          <th aria-label="O'chirish"></th>
+        </tr>
+      </thead>
+      <tbody id="procBody"></tbody>
+    </table>
+    <button type="button" class="btn ghost" id="addRow">+ Jarayon qo'shish</button>
+
+    <p class="error" id="error" role="alert" hidden></p>
+  </section>
+
+  <!-- 2. Simulyatsiya -->
+  <section class="card wide" id="simCard" aria-labelledby="h-sim">
+    <h2 id="h-sim">2. Qadamma-qadam simulyatsiya</h2>
+
+    <div class="controls">
+      <button type="button" class="btn" id="bFirst" title="Boshiga">⏮</button>
+      <button type="button" class="btn" id="bPrev" title="Orqaga (←)">◀ Orqaga</button>
+      <button type="button" class="btn primary" id="bNext" title="Keyingi qadam (→)">Keyingi ▶</button>
+      <button type="button" class="btn" id="bPlay" title="Avto (Probel)">⏯ Avto</button>
+      <button type="button" class="btn" id="bLast" title="Natijani darhol ko'rsatish">⏭ Oxiriga</button>
+      <label class="speed">Tezlik
+        <select id="speed">
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+        </select>
+      </label>
+      <span class="stepno" id="stepNo"></span>
+    </div>
+
+    <h3>Gantt diagrammasi</h3>
+    <div class="gantt" id="gantt" aria-label="Gantt diagrammasi"></div>
+    <div class="ruler" id="ruler" aria-hidden="true"></div>
+
+    <div class="now">
+      <div class="nowhead">
+        <strong id="nowTime"></strong>
+      </div>
+      <h3 id="queueTitle">Navbat</h3>
+      <div class="queue" id="queue"></div>
+      <h3>Nima bo'ldi va nega?</h3>
+      <ul class="explain" id="explain"></ul>
+    </div>
+
+    <h3>Jarayonlar holati</h3>
+    <div class="scroll">
+      <table class="state" id="stateTable">
+        <thead id="stateHead"></thead>
+        <tbody id="stateBody"></tbody>
+        <tfoot id="stateFoot"></tfoot>
+      </table>
+    </div>
+    <div class="result" id="result" hidden></div>
+    <div class="export" id="exportBox" hidden>
+      <button type="button" class="btn primary" id="bExport">⬇ Natijani Excel'ga yuklash</button>
+      <span class="hint">Yuklashdan oldin qaysi usul(lar) natijasi kerakligini tanlaysiz.</span>
+    </div>
+  </section>
+
+  <!-- 3. Taqqoslash -->
+  <section class="card wide" aria-labelledby="h-cmp">
+    <h2 id="h-cmp">3. Algoritmlarni taqqoslash</h2>
+    <p class="hint">Hozirgi jadval uchun uchala algoritm natijasi. Eng kichik o'rtacha kutish vaqti ajratib ko'rsatilgan.</p>
+    <div class="scroll">
+      <table class="state" id="cmpTable">
+        <thead>
+          <tr><th>Algoritm</th><th>AWT</th><th>ATAT</th><th>Jarayon almashinuvi</th><th>Tugash vaqti</th></tr>
+        </thead>
+        <tbody id="cmpBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 4. Nazariya -->
+  <section class="card wide" aria-labelledby="h-th">
+    <h2 id="h-th">4. Qisqa nazariya</h2>
+    <details open>
+      <summary>Formulalar</summary>
+      <ul class="formulas">
+        <li><code>TAT = CT − AT</code> — jarayon tizimda bo'lgan vaqt</li>
+        <li><code>WT = TAT − BT</code> — navbatda kutgan vaqt</li>
+        <li><code>AWT = (WT₁ + WT₂ + … + WTₙ) / n</code> — o'rtacha kutish vaqti</li>
+      </ul>
+      <p class="hint">AT — kelish vaqti, BT — bajarilish vaqti, CT — tugash vaqti (Gantt diagrammasidan olinadi).</p>
+    </details>
+    <details>
+      <summary>Priority (preemptive) qanday ishlaydi</summary>
+      <p>Har bir lahzada tayyor jarayonlar ichidan ustuvorligi eng yuqorisi (soni eng kichigi) ishlaydi. Yangi jarayon kelib, uning ustuvorligi joriy jarayonnikidan yuqori bo'lsa, joriy jarayon to'xtatiladi. Ustuvorlik teng bo'lsa, oldin kelgani tanlanadi. Non-preemptive variantda esa jarayon boshlagach tugamaguncha ishlaydi.</p>
+    </details>
+    <details>
+      <summary>Round Robin qanday ishlaydi</summary>
+      <p>Jarayonlar FIFO navbatda turadi. Navbat boshidagi jarayon ko'pi bilan TQ birlik ishlaydi. Tugamasa, navbat oxiriga o'tadi. Kvant davomida yangi jarayon kelsa, u to'xtatilgan jarayondan oldin navbatga qo'shiladi.</p>
+    </details>
+  </section>
+
+</main>
+
+<footer class="foot wrap">
+  Operatsion tizimlar · Mamasoliyev Diyorbek, SRM002-2
+</footer>
+
+
+<dialog id="exportDlg" aria-labelledby="exportTitle">
+  <form method="dialog" id="exportForm">
+    <h2 id="exportTitle">Excel'ga yuklash</h2>
+    <p class="hint">Qaysi usulda yechilgan natijani yuklab olmoqchisiz? Bitta, ikkita yoki uchalasini tanlashingiz mumkin. Har biri alohida varaqqa yoziladi.</p>
+    <label class="opt"><input type="checkbox" name="algo" value="priority-p"> <span><strong>Priority — Preemptive</strong><small>to'xtatuvchi usul</small></span></label>
+    <label class="opt"><input type="checkbox" name="algo" value="priority-np"> <span><strong>Priority — Non-preemptive</strong><small>to'xtatmaydigan usul</small></span></label>
+    <label class="opt"><input type="checkbox" name="algo" value="rr"> <span><strong>Round Robin</strong><small id="rrOptNote">vaqt kvanti bilan</small></span></label>
+    <button type="button" class="chip-btn" id="selAll">Hammasini tanlash</button>
+    <p class="error" id="exportErr" hidden>Kamida bitta usulni tanlang.</p>
+    <div class="dlgbtns">
+      <button type="button" class="btn" id="exportCancel">Bekor qilish</button>
+      <button type="button" class="btn primary" id="exportGo">⬇ Yuklab olish</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="lib/exceljs.min.js"></script>
+<script src="engine.js"></script>
+<script src="export.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
